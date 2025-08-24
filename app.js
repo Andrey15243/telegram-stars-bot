@@ -26,8 +26,8 @@ const WEBHOOK_PATH = `/webhook/${token}`;
 const WEBHOOK_URL = `${DOMAIN}${WEBHOOK_PATH}`;
 
 app.post(WEBHOOK_PATH, (req, res) => {
-  bot.handleUpdate(req.body, res).catch(console.error);
-  res.sendStatus(200);
+  res.sendStatus(200);              // отвечаем Telegram сразу
+  bot.handleUpdate(req.body).catch(console.error); // обрабатываем апдейт асинхронно
 });
 
 // ====== CREATE INVOICE ======
