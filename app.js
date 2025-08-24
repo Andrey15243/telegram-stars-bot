@@ -1,46 +1,56 @@
+import express from "express";
+import bodyParser from "body-parser";
 import { Telegraf, Markup } from "telegraf";
 
-// ====== Настройки ======
 const token = "7430493613:AAEfyR9XLw5CK2y82rVhFsZkVcAvKmXDtYc";
-const webAppUrl = "https://transaction-ton.web.app";
-const DOMAIN = "https://YOUR_DOMAIN"; // например https://example.com
-const PORT = process.env.PORT || 3000;
-const MODE = process.env.MODE || "polling"; // по умолчанию polling
+const DOMAIN = process.env.DOMAIN; // публичный URL Render
+const PORT = process.env.PORT || 10000;
 
 const bot = new Telegraf(token);
 
-// ====== /start ======
-bot.start((ctx) =>
+// /start — открывает Web App
+bot.start((ctx) => {
   ctx.reply(
-    "Привет! Это тестовый бот 🚀",
-    Markup.inlineKeyboard([Markup.button.webApp("Открыть Web App", webAppUrl)])
-  )
-);
+    "Привет! Покупаем звёзды ⭐",
+    Markup.inlineKeyboard([
+      Markup.button.webApp("Открыть Web App", "https://transaction-ton.web.app")
+    ])
+  );
+});
 
-// ====== Запуск ======
-if (MODE === "webhook") {
-  // динамически подгружаем express только если нужен webhook
-  const { default: express } = await import("express");
-  const { default: bodyParser } = await import("body-parser");
+const app = express();
+app.use(bodyParser.json());
 
-  const app = express();
-  app.use(bodyParser.json());
+// ====== WEBHOOK ======
+const WEBHOOK_PATH = `/webhook/${token}`;
+const WEBHOOK_URL = `${DOMAIN}${WEBHOOK_PATH}`;
 
-  const WEBHOOK_PATH = `/webhook/${token}`;
-  const WEBHOOK_URL = `${DOMAIN}${WEBHOOK_PATH}`;
+app.post(WEBHOOK_PATH, (req, res) => {
+  bot.handleUpdate(req.body, res).catch(console.error);
+  res.sendStatus(200);
+});
 
-  app.post(WEBHOOK_PATH, (req, res) => {
-    bot.handleUpdate(req.body, res).catch(console.error);
-    res.sendStatus(200);
-  });
+// ====== CREATE INVOICE ======
+app.post("/create-invoice", async (req, res) => {
+  try {
+    const invoice = await bot.telegram.createInvoiceLink({
+      title: "Покупка звезды",
+      description: "Оплата через Telegram Stars",
+      payload: "custom_payload",
+      provider_token: "", // пусто для Stars
+      currency: "XTR",
+      prices: [{ label: "Star", amount: 100 }]
+    });
+    res.json({ invoiceLink: invoice });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  app.listen(PORT, async () => {
-    console.log(`Server running on port ${PORT}`);
-    await bot.telegram.setWebhook(WEBHOOK_URL);
-    console.log(`Webhook установлен: ${WEBHOOK_URL}`);
-  });
-} else {
-  // локальный режим (polling)
-  bot.launch();
-  console.log("Бот запущен через polling (локально)");
-}
+// ====== Запуск сервера ======
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  await bot.telegram.setWebhook(WEBHOOK_URL);
+  console.log(`Webhook установлен: ${WEBHOOK_URL}`);
+});
