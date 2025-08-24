@@ -11,8 +11,8 @@ const bot = new Telegraf(token);
 const app = express();
 
 // ====== Мидлвары ======
-app.use(cors());           // Разрешаем кросс-доменные запросы
-app.use(bodyParser.json()); // Парсинг JSON
+app.use(cors());
+app.use(bodyParser.json());
 
 // ====== /start ======
 bot.start((ctx) => {
@@ -29,13 +29,13 @@ const WEBHOOK_PATH = `/webhook/${token}`;
 const WEBHOOK_URL = `${DOMAIN}${WEBHOOK_PATH}`;
 
 app.post(WEBHOOK_PATH, (req, res) => {
-  res.sendStatus(200);              // ответ сразу
+  res.sendStatus(200);                       // отвечаем сразу
   bot.handleUpdate(req.body).catch(console.error); // обработка асинхронно
 });
 
 // ====== CREATE INVOICE ======
 app.post("/create-invoice", async (req, res) => {
-  console.log("Запрос /create-invoice получен"); // лог
+  console.log("Запрос /create-invoice получен");
   try {
     const invoice = await bot.telegram.createInvoiceLink({
       title: "Покупка звезды",
